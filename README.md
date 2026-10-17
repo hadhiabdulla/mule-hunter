@@ -8,9 +8,9 @@ It has three modes, all in one local web app:
 
 | Mode | Data | Needs labels? |
 |---|---|---|
-| **Real data: Elliptic** | The public Elliptic Bitcoin graph, 203,769 real transactions with illicit/licit labels | Yes (provided) |
+| **Elliptic (Bitcoin)** | The public Elliptic Bitcoin graph, 203,769 real transactions with illicit/licit labels | Yes (provided) |
 | **Upload your CSV** | Your own transactions (sender, receiver, amount, timestamp, optional label) | No |
-| **Real data: 2024 addresses** | Real-CATS: real criminal and benign Bitcoin and Ethereum addresses, data to 2024 | Yes (provided) |
+| **Real-CATS (BTC+ETH)** | Real-CATS: real criminal and benign Bitcoin and Ethereum addresses, data to 2024 | Yes (provided) |
 | **Live Bitcoin** | Recent confirmed Bitcoin transactions pulled from the free public mempool.space API (no key) | No |
 
 No third-party Python packages. Standard library only.
@@ -74,7 +74,7 @@ Trained on time steps 1-34 (the past), tested on steps 35-49 (the future, never 
 How to read it: a supervised model on the dataset's features does the heavy lifting. Graph taint adds little to overall ROC but is very precise at the top of its list (87% of its top-ranked are truly illicit) when an analyst supplies a few confirmed seeds. The unsupervised Isolation Forest does **worse than random** on this data, because Elliptic's illicit transactions look structurally ordinary. It stays in the project because it is the only option on unlabelled data (upload and live modes) and the table shows its limits. The time split is hard: a darknet market shut down at step 43 and models trained earlier lose accuracy after it, a known effect in the literature.
 
 
-## Second real dataset: Real-CATS (2025, data up to 2024)
+## Second dataset: Real-CATS (2025, data up to 2024)
 
 Real-CATS has real criminal addresses taken from public reports (ransomware, phishing, impersonation, romance and other scams, hacks and so on) and benign exchange-customer addresses, for Bitcoin and Ethereum. Repository licence is MIT: <https://github.com/sjdseu/Real-CATS> (paper: <https://arxiv.org/abs/2501.15553>). It is downloaded when you run `python3 run.py --realcats` and is not stored in this repo. It describes addresses, not a transaction graph, so only the supervised models are used here.
 

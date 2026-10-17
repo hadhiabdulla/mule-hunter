@@ -10,7 +10,7 @@ A **money mule** is a person or account used to move money that came from crime.
 
 **Mule Hunter** does that. It reads transactions, builds the money-flow graph, and gives every account or transaction a risk score from 0 to 100 together with plain-language reasons. It has three modes in one local web app:
 
-1. **Real data: Elliptic.** 203,769 real Bitcoin transactions labelled illicit or licit. Used to train and honestly evaluate the models.
+1. **Elliptic (Bitcoin).** 203,769 real Bitcoin transactions labelled illicit or licit. Used to train and honestly evaluate the models.
 2. **Upload your CSV.** Any transaction file with sender, receiver, amount, timestamp and an optional label.
 3. **Live Bitcoin.** Recent confirmed transactions from the free public mempool.space API, scored with no keys.
 
@@ -166,7 +166,7 @@ High-risk Elliptic transactions that are connected are grouped into suspected la
 
 # 6. Using the app
 
-## 6.1 Real data: Elliptic tab
+## 6.1 Elliptic (Bitcoin) tab
 
 Shows the evaluation table, the strongest signals, the suspected networks, an interactive graph of the top clusters, and the highest-risk unlabelled transactions ("new leads"). The graph: drag nodes, scroll to zoom, click a node for its reasons. A red ring marks transactions labelled illicit, a teal ring labelled licit; colour shows risk.
 
@@ -236,7 +236,7 @@ Choose the number of recent blocks and transactions per block and press **Fetch 
 
 **Why Bitcoin and not bank data?** No open real bank mule dataset exists with a usable licence. The pattern that defines a mule, quick relay through a chain of accounts, is the same in crypto laundering, so the methods carry over. I say clearly that this is crypto.
 
-**Is it real data?** Yes. Elliptic is real Bitcoin transactions labelled by a blockchain analytics company. The sample CSV and unit tests use tiny hand-made examples for format and code checking only.
+**Where does the data come from?** Elliptic is Bitcoin transactions labelled by a blockchain analytics company. The sample CSV and unit tests use tiny hand-made examples for format and code checking only.
 
 **Why a time split?** Random splits leak information between neighbouring transactions. Training on the past and testing on the future is how it would be used.
 
