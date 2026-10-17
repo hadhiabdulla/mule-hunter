@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mule Hunter</title>
+<style>
+:root{--bg:#0b1020;--panel:#131a30;--panel2:#1a2340;--line:#27325a;--tx:#e6eaf7;--mut:#8b97bf;--acc:#4cc9f0;--red:#ff5d73;--amb:#ffb703;--grn:#3ddc97}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif}
+header{padding:18px 28px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+h1{margin:0;font-size:20px;letter-spacing:.3px}h1 span{color:var(--acc)}header p{margin:0;color:var(--mut)}
+nav{display:flex;gap:6px;padding:12px 28px 0}nav button{background:none;border:0;color:var(--mut);padding:10px 16px;font-size:14px;cursor:pointer;border-bottom:2px solid transparent}
+nav button.on{color:var(--tx);border-color:var(--acc)}main{padding:20px 28px 60px;max-width:1280px;margin:auto}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:14px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.card b{display:block;font-size:24px}.card span{color:var(--mut);font-size:12px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0}
+h2{font-size:16px;margin:0 0 10px}h3{font-size:14px;margin:12px 0 6px;color:var(--acc)}
+table{border-collapse:collapse;width:100%}th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--mut);font-weight:600;font-size:12px}tr.click{cursor:pointer}tr.click:hover{background:var(--panel2)}
+.pill{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:600}
+.hi{background:#ff5d7326;color:var(--red)}.md{background:#ffb70326;color:var(--amb)}.lo{background:#3ddc9726;color:var(--grn)}
+.note{color:var(--mut);font-size:12.5px}.warn{background:#ffb70318;border:1px solid #ffb70355;border-radius:10px;padding:10px 14px;color:#ffd77a;margin:12px 0}
+.err{background:#ff5d7318;border:1px solid #ff5d7355;color:#ff9aa8;border-radius:10px;padding:10px 14px;margin:12px 0}
+button.pri{background:var(--acc);color:#04202b;border:0;border-radius:9px;padding:9px 18px;font-weight:700;cursor:pointer}
+button.pri:disabled{opacity:.5}select,input[type=number]{background:var(--panel2);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:30px;text-align:center;color:var(--mut);cursor:pointer}
+.drop.over{border-color:var(--acc);color:var(--tx)}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}.bar{height:8px;background:var(--acc);border-radius:4px}
+.net{display:grid;grid-template-columns:1fr 300px;gap:12px}@media(max-width:900px){.net{grid-template-columns:1fr}}
+canvas{width:100%;height:520px;background:#0a0f20;border:1px solid var(--line);border-radius:12px;display:block}
+.side{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;min-height:200px;font-size:13px}
+.legend span{display:inline-block;margin-right:14px;font-size:12px;color:var(--mut)}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+code{background:var(--panel2);padding:1px 6px;border-radius:5px}.spin{color:var(--acc)}
+</style></head><body>
+<header><h1>Mule <span>Hunter</span></h1><p>Graph-based money-laundering and mule-account detection</p></header>
+<nav id="nav"><button class="on" data-t="ell">Real data: Elliptic</button><button data-t="up">Upload your CSV</button><button data-t="live">Live Bitcoin</button><button data-t="about">How it works</button></nav>
+<main>
+<section id="ell"></section>
+<section id="up" hidden>
+ <div class="box"><h2>Upload your own transactions</h2>
+ <p class="note">CSV with sender, receiver, amount, timestamp and optionally a label (1 = known fraud). Your file stays on this computer; nothing is uploaded anywhere.</p>
+ <div class="drop" id="drop">Drop a CSV here or click to choose<input id="file" type="file" accept=".csv,text/csv" hidden></div>
+ <div id="map"></div></div><div id="upres"></div>
+</section>
+<section id="live" hidden>
+ <div class="box"><h2>Score recent real Bitcoin transactions</h2>
+ <p class="note">Pulls confirmed transactions from the free public mempool.space API (no key) and scores addresses with the same graph and anomaly methods. There are no ground-truth labels, so results are leads to inspect, not accusations. Exchanges and busy services can look suspicious.</p>
+ Blocks <input id="lb" type="number" value="6" min="1" max="10" style="width:70px"> Transactions per block <input id="lp" type="number" value="100" min="25" max="300" step="25" style="width:80px">
+ <button class="pri" id="lgo">Fetch and score</button></div><div id="liveres"></div>
+</section>
+<section id="about" hidden></section>
+</main>
+<script>
+const $=s=>document.querySelector(s),E=(t,h)=>{const e=document.createElement(t);if(h!=null)e.innerHTML=h;return e};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pill=r=>`<span class="pill ${r>=60?'hi':r>=40?'md':'lo'}">${Number(r).toFixed(0)}</span>`;
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+ ['ell','up','live','about'].forEach(t=>$('#'+t).hidden=t!==b.dataset.t)});
+const color=r=>r>=60?'#ff5d73':r>=40?'#ffb703':'#3ddc97';
+
+function network(host,data,opts={}){
+ host.innerHTML='<div class="legend"><span><i class="dot" style="background:#ff5d73"></i>high risk</span><span><i class="dot" style="background:#ffb703"></i>medium</span><span><i class="dot" style="background:#3ddc97"></i>low</span>'+(opts.labels?'<span>red ring = labelled illicit, teal ring = labelled licit</span>':'')+'<span>drag nodes, scroll to zoom, click for details</span></div><div class="net"><canvas></canvas><div class="side">Click a node.</div></div>';
+ const cv=host.querySelector('canvas'),side=host.querySelector('.side'),ctx=cv.getContext('2d');
+ const W=cv.width=cv.clientWidth*2,H=cv.height=1040;const N=data.nodes.map((n,i)=>({...n,x:W/2+Math.cos(i)*200+Math.random()*50,y:H/2+Math.sin(i*1.7)*200+Math.random()*50,vx:0,vy:0}));
+ const idx={};N.forEach((n,i)=>idx[n.id]=i);const Ed=data.edges.map(e=>({a:idx[e.s],b:idx[e.d],w:e.amt})).filter(e=>e.a!=null&&e.b!=null);
+ let sc=1,ox=0,oy=0,drag=null,pan=null,sel=null,t=0;
+ function step(){const k=Math.min(1,N.length/60);for(let i=0;i<N.length;i++)for(let j=i+1;j<N.length;j++){let dx=N[i].x-N[j].x,dy=N[i].y-N[j].y,d=dx*dx+dy*dy+1;if(d>250000)continue;const f=(3500*k+800)/d;N[i].vx+=dx*f;N[i].vy+=dy*f;N[j].vx-=dx*f;N[j].vy-=dy*f}
+  Ed.forEach(e=>{const A=N[e.a],B=N[e.b];let dx=B.x-A.x,dy=B.y-A.y,d=Math.sqrt(dx*dx+dy*dy)+.1,f=(d-50)*.03;A.vx+=dx/d*f;A.vy+=dy/d*f;B.vx-=dx/d*f;B.vy-=dy/d*f});
+  N.forEach(n=>{n.vx+=(W/2-n.x)*.006;n.vy+=(H/2-n.y)*.006;if(n!==drag){n.x+=n.vx*.5;n.y+=n.vy*.5}n.vx*=.8;n.vy*=.8})}
+ function draw(){ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(ox,oy);ctx.scale(sc,sc);ctx.lineWidth=2;ctx.strokeStyle='#5566a8';
+  Ed.forEach(e=>{const A=N[e.a],B=N[e.b];ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();const dx=B.x-A.x,dy=B.y-A.y,d=Math.sqrt(dx*dx+dy*dy)||1,ux=dx/d,uy=dy/d,px=B.x-ux*10,py=B.y-uy*10;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px-ux*7-uy*4,py-uy*7+ux*4);ctx.lineTo(px-ux*7+uy*4,py-uy*7-ux*4);ctx.fillStyle='#5566a8';ctx.fill()});
+  N.forEach(n=>{const r=10+n.risk/9;ctx.beginPath();ctx.arc(n.x,n.y,r,0,7);ctx.fillStyle=color(n.risk);ctx.fill();
+   if(opts.labels&&n.label!=='unknown'){ctx.lineWidth=3;ctx.strokeStyle=n.label==='illicit'?'#ff5d73':'#2ec4b6';ctx.beginPath();ctx.arc(n.x,n.y,r+4,0,7);ctx.stroke()}
+   if(n===sel){ctx.lineWidth=3;ctx.strokeStyle='#fff';ctx.beginPath();ctx.arc(n.x,n.y,r+7,0,7);ctx.stroke()}});ctx.restore()}
+ function fit(){if(!N.length)return;let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;N.forEach(n=>{x0=Math.min(x0,n.x);x1=Math.max(x1,n.x);y0=Math.min(y0,n.y);y1=Math.max(y1,n.y)});sc=Math.min(W/(x1-x0+120),H/(y1-y0+120),2);ox=W/2-(x0+x1)/2*sc;oy=H/2-(y0+y1)/2*sc}
+ for(let i=0;i<260;i++)step();fit();
+ function loop(){if(!cv.isConnected)return;if(t++<400)step();if(t==60||t==200)fit();draw();requestAnimationFrame(loop)}loop();
+ const pos=ev=>{const r=cv.getBoundingClientRect();return[((ev.clientX-r.left)*2-ox)/sc,((ev.clientY-r.top)*2-oy)/sc]};
+ const hit=ev=>{const[x,y]=pos(ev);return N.find(n=>(n.x-x)**2+(n.y-y)**2<(10+n.risk/10)**2*1.6)};
+ cv.onmousedown=ev=>{const n=hit(ev);if(n){drag=n;sel=n;show(n)}else pan=[ev.clientX,ev.clientY,ox,oy]};
+ window.addEventListener('mousemove',ev=>{if(drag){[drag.x,drag.y]=pos(ev);t=Math.min(t,300)}else if(pan){ox=pan[2]+(ev.clientX-pan[0])*2;oy=pan[3]+(ev.clientY-pan[1])*2}});
+ window.addEventListener('mouseup',()=>{drag=null;pan=null});
+ cv.onwheel=ev=>{ev.preventDefault();const f=ev.deltaY<0?1.12:.89;sc*=f;};
+ function show(n){side.innerHTML=`<b style="word-break:break-all">${esc(n.id)}</b><br>${pill(n.risk)} risk score${n.label?` &middot; ${n.label}`:''}${n.step?` &middot; time step ${n.step}`:''}<h3>Why flagged</h3>`+((n.reasons&&n.reasons.length)?'<ul style="padding-left:18px;margin:0">'+n.reasons.map(r=>`<li>${esc(r)}</li>`).join('')+'</ul>':'<span class="note">No strong signal; shown as a counterparty.</span>')+(n.recv!=null?`<p class="note">Received ${n.recv} / sent ${n.sent}</p>`:'')}
+}
+function results(host,d){
+ const s=d.summary;let h=`<div class="cards"><div class="card"><b>${s.accounts}</b><span>accounts</span></div><div class="card"><b>${s.transactions}</b><span>transactions</span></div><div class="card"><b style="color:var(--red)">${s.high_risk}</b><span>high risk (60+)</span></div><div class="card"><b style="color:var(--amb)">${s.medium_risk}</b><span>medium risk (40-59)</span></div><div class="card"><b>${s.round_trips}</b><span>round-trip loops</span></div></div>`;
+ if(d.report){const r=d.report;h+=`<p class="note">Used ${r.rows_ok} rows, skipped ${r.rows_skipped}. Columns: ${Object.entries(r.mapping).map(([k,v])=>k+' = '+esc(v)).join(', ')}.${r.has_labels?' Labels were used.':''}</p>`+(r.problems.length?`<div class="warn">${r.problems.map(esc).join('<br>')}</div>`:'')}
+ if(d.live)h+=`<p class="note">Real Bitcoin blocks ${d.live.blocks.join(', ')} (newest block time ${d.live.newest_block_time_utc} UTC), ${d.live.txs} transactions.</p>`;
+ h+=`<div class="box"><h2>Network of suspicious accounts</h2><div id="nv"></div></div><div class="box"><h2>Ranked accounts</h2><table><tr><th>Account</th><th>Risk</th><th>Why</th><th>In / out</th></tr>`+
+ d.top.map(r=>`<tr><td style="word-break:break-all">${esc(r.account)}</td><td>${pill(r.risk)}</td><td>${r.reasons.map(x=>esc(x.text)).join('<br>')||'<span class="note">-</span>'}</td><td>${r.tx_in} / ${r.tx_out}</td></tr>`).join('')+'</table></div>';
+ host.innerHTML=h;network(host.querySelector('#nv'),d.network)}
+async function post(url,body){const r=await fetch(url,{method:'POST',body:JSON.stringify(body)});const j=await r.json();if(!r.ok)throw new Error(j.error||'Request failed');return j}
+// upload
+let csvText='';const drop=$('#drop'),fi=$('#file');drop.onclick=()=>fi.click();
+['dragover','dragenter'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',ev=>load(ev.dataTransfer.files[0]));fi.onchange=()=>load(fi.files[0]);
+async function load(f){if(!f)return;$('#upres').innerHTML='';csvText=await f.text();try{const p=await post('/api/upload/preview',{csv:csvText});mapping(p)}catch(e){$('#map').innerHTML=`<div class="err">${esc(e.message)}</div>`}}
+function mapping(p){const roles=[['sender','Sender account'],['receiver','Receiver account'],['amount','Amount'],['timestamp','Timestamp'],['label','Label (optional)']];
+ let h='<h3>Check the column mapping</h3><div style="display:flex;gap:14px;flex-wrap:wrap">'+roles.map(([k,t])=>`<label>${t}<br><select data-k="${k}"><option value="">${k==='label'?'(none)':'choose...'}</option>${p.header.map((c,i)=>`<option value="${i}" ${p.mapping[k]===i?'selected':''}>${esc(c)}</option>`).join('')}</select></label>`).join('')+
+ '<label>Reporting limit<br><input id="lim" type="number" value="10000" style="width:110px"></label></div><h3>First rows</h3><table><tr>'+p.header.map(c=>`<th>${esc(c)}</th>`).join('')+'</tr>'+p.sample.map(r=>'<tr>'+r.map(c=>`<td>${esc(c)}</td>`).join('')+'</tr>').join('')+'</table><p><button class="pri" id="ugo">Analyse</button></p>';
+ $('#map').innerHTML=h;$('#ugo').onclick=async()=>{const m={};document.querySelectorAll('#map select').forEach(s=>m[s.dataset.k]=s.value);const b=$('#ugo');b.disabled=true;b.textContent='Analysing...';
+  try{results($('#upres'),await post('/api/upload/analyse',{csv:csvText,mapping:m,limit:$('#lim').value}))}catch(e){$('#upres').innerHTML=`<div class="err">${esc(e.message)}</div>`}b.disabled=false;b.textContent='Analyse'}}
+$('#lgo').onclick=async()=>{const b=$('#lgo');b.disabled=true;b.textContent='Fetching...';$('#liveres').innerHTML='<p class="spin">Reading recent blocks from the public API...</p>';
+ try{results($('#liveres'),await post('/api/live',{blocks:+$('#lb').value,per_block:+$('#lp').value}))}catch(e){$('#liveres').innerHTML=`<div class="err">${esc(e.message)}</div>`}b.disabled=false;b.textContent='Fetch and score'};
+// elliptic
+fetch('/api/elliptic').then(r=>r.json().then(j=>({ok:r.ok,j}))).then(({ok,j})=>{const host=$('#ell');if(!ok){host.innerHTML=`<div class="box"><h2>Elliptic results not built yet</h2><p>${esc(j.error)}</p></div>`;return}
+ const m=j.metrics,sp=m.split;const rows=Object.entries(m).filter(([k])=>k!=='split');
+ let h=`<div class="warn"><b>What this data is:</b> the real, public Elliptic Bitcoin transaction graph (${j.totals.transactions.toLocaleString()} real transactions, collected 2019, labelled illicit or licit by Elliptic). It is crypto, not bank accounts, so "mule-like" here means relay and layering behaviour inside illicit money flows. Dataset licence CC BY-NC-ND 4.0.</div>
+ <div class="cards"><div class="card"><b>${j.totals.transactions.toLocaleString()}</b><span>real transactions</span></div><div class="card"><b>${sp.train_illicit.toLocaleString()}</b><span>illicit used to train (steps ${sp.train_steps})</span></div><div class="card"><b>${sp.test_illicit_evaluated}</b><span>illicit held out (steps ${sp.test_steps})</span></div><div class="card"><b>${(m['random forest only'].f1*100).toFixed(0)}%</b><span>F1 on unseen time period</span></div><div class="card"><b>${j.totals.high_risk.toLocaleString()}</b><span>test-period tx rated 50+</span></div></div>
+ <div class="box"><h2>Evaluation on real labels (trained on the past, tested on the future)</h2><table><tr><th>Method</th><th>ROC-AUC</th><th>PR-AUC</th><th>Precision</th><th>Recall</th><th>F1</th><th>Precision@k</th></tr>`+rows.map(([k,v])=>`<tr><td>${esc(k)}</td>${['roc_auc','pr_auc','precision','recall','f1','precision_at_k'].map(x=>`<td>${v[x].toFixed(3)}</td>`).join('')}</tr>`).join('')+`</table><p class="note">${sp.analyst_seeds} confirmed illicit transactions in the test period were revealed as analyst seeds and are excluded from scoring. Weak rows (isolation forest, degree) are kept on purpose: structure alone does not separate illicit from licit in this data.</p></div>
+ <div class="grid2"><div class="box"><h2>Most important signals</h2>`+(()=>{const mx=j.importance[0][1];return j.importance.slice(0,10).map(([n,v])=>`<div style="margin:6px 0"><span class="note">${esc(n)}</span><div class="bar" style="width:${v/mx*100}%"></div></div>`).join('')})()+`</div>
+ <div class="box"><h2>Suspected laundering networks</h2><table><tr><th>Case</th><th>Size</th><th>Known illicit</th><th>New leads</th></tr>`+j.clusters.map(c=>`<tr><td>${c.id}</td><td>${c.size}</td><td>${c.confirmed_illicit}</td><td>${c.unlabelled_leads}</td></tr>`).join('')+`</table><p class="note">Case files: results/cases/</p></div></div>
+ <div class="box"><h2>Network of the highest-risk clusters</h2><div id="en"></div></div>
+ <div class="box"><h2>Top new leads (unlabelled transactions the model rates highest)</h2><table><tr><th>Transaction</th><th>Risk</th><th>Step</th><th>Why</th></tr>`+j.leads.slice(0,25).map(r=>`<tr><td>${r.id}</td><td>${pill(r.risk)}</td><td>${r.step}</td><td>${r.reasons.map(esc).join('<br>')}</td></tr>`).join('')+'</table></div>';
+ host.innerHTML=h;network($('#en'),j.network,{labels:true})});
+$('#about').innerHTML=`<div class="box"><h2>How Mule Hunter works</h2><p>Real mule operations move stolen money through chains of accounts that pass it on quickly and in similar amounts. The tool looks at the money-flow graph and combines several independent signals.</p>
+<h3>On the Elliptic data</h3><ul><li><b>Graph features:</b> in/out degree, 2-hop fan-in/fan-out hubs, one-in-one-out relay chains, forward and reverse PageRank.</li><li><b>Random forest and logistic regression</b> written from scratch, trained on the past time steps and tested on later ones.</li><li><b>Seeded taint propagation:</b> confirmed illicit transactions spread suspicion along the flow, in both directions.</li><li><b>Case files</b> for each connected high-risk cluster.</li></ul>
+<h3>On your CSV and live data (no labels needed)</h3><ul><li><b>Relay detection</b> (money in, nearly the same money out within hours), <b>round-trip loops</b>, <b>hub behaviour</b>, <b>structuring</b> below a reporting limit, <b>Isolation Forest</b> anomaly score, and <b>taint</b> from any labels you supply.</li><li>Signals combine with a noisy-OR, so every score comes with plain-language reasons.</li></ul>
+<h3>CSV format</h3><pre style="background:var(--panel2);padding:10px;border-radius:8px">sender,receiver,amount,timestamp,label
+ACC001,ACC114,4900.00,2026-03-02 09:14:00,1
+ACC114,ACC207,4650.00,2026-03-02 10:02:00,</pre><p class="note">Scores are leads for human review, not proof of wrongdoing.</p></div>`;
+</script></body></html>

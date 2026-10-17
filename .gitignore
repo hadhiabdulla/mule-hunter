@@ -1,0 +1,6 @@
+data/
+__pycache__/
+*.pyc
+results/elliptic.json
+results/cases/
+.DS_Store
