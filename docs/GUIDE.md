@@ -31,6 +31,25 @@ A **money mule** is a person or account used to move money that came from crime.
 
 Datasets considered and why they were not the main choice: Elliptic++ (real wallet addresses, but on Google Drive only and no stated licence), Elliptic2 (large laundering subgraphs), the RBIH x IIT Delhi mule dataset (real mule labels but 16 GB, hackathon data on an unofficial mirror with no licence), IBM AML (synthetic by design), UCI BitcoinHeist (address features only, no graph), ICIJ FinCEN Files (suspicious-activity records under restrictive terms, no mule labels).
 
+## 2.1 Second dataset: Real-CATS (2025, data to 2024)
+
+Real criminal addresses from public reports plus benign exchange-customer addresses, Bitcoin (40,032 criminal, 86,583 benign) and Ethereum (12,561 criminal, 15,595 benign), 32 or 52 behaviour features each, MIT licence on the authors' repository (github.com/sjdseu/Real-CATS, arXiv 2501.15553). Downloaded at run time with `--realcats`. Address-level only (no transaction graph). Time split: train on addresses first seen earlier, test on later ones.
+
+| Data and method | ROC-AUC | PR-AUC | Precision | Recall | F1 |
+|---|---|---|---|---|---|
+| BTC random forest | 0.785 | 0.213 | 0.295 | 0.297 | 0.296 |
+| BTC logistic regression | 0.644 | 0.107 | 0.345 | 0.116 | 0.173 |
+| ETH random forest | 0.804 | 0.655 | 0.505 | 0.744 | 0.602 |
+| ETH logistic regression | 0.812 | 0.648 | 0.539 | 0.716 | 0.615 |
+
+Bitcoin is harder than Ethereum on a time split. The `*_checked` columns were removed because they show which tag database held the address, which leaks the label.
+
+![Real-CATS tab](img/realcats.png){width=80%}
+
+## 2.2 Known-bad address lists
+
+Uploads and live results are also checked against the US OFAC sanctions list (913 addresses when tested) and the ScamSniffer scam-address list (2,530 Ethereum addresses, GPL-3.0, fetched not bundled). A match is real ground truth: OFAC sets risk to 100, ScamSniffer to at least 90.
+
 # 3. Architecture
 
 ```
@@ -61,7 +80,9 @@ Datasets considered and why they were not the main choice: Elliptic++ (real wall
 | `mulehunter/upload.py` | CSV column detection and validation |
 | `mulehunter/live.py` | Public blockchain API client |
 | `mulehunter/web.py`, `static/index.html` | Local web server and interface |
-| `tests/` | 11 unit tests on small hand-made examples |
+| `mulehunter/realcats.py` | Real-CATS download, time-split training, per-crime-type recall |
+| `mulehunter/watchlists.py` | OFAC and ScamSniffer lists, fetched when needed |
+| `tests/` | 14 tests, including an end-to-end upload test through the web server |
 
 Everything is Python standard library. The models are written from scratch on purpose, so each one can be explained line by line.
 
@@ -72,6 +93,7 @@ git clone https://github.com/hadhiabdulla/mule-hunter.git
 cd mule-hunter
 python3 run.py --download     # one time, about 700 MB
 python3 run.py --elliptic     # about a minute; writes results/
+python3 run.py --realcats     # optional, Real-CATS download and evaluation
 python3 run.py --serve        # open http://127.0.0.1:8000
 python3 -m unittest discover tests
 ```
@@ -195,7 +217,7 @@ Choose the number of recent blocks and transactions per block and press **Fetch 
 * The unsupervised Isolation Forest and the degree baseline fail on this data. Reporting that is part of honest evaluation.
 * Known weakness: a darknet market closed at step 43 and models trained earlier lose accuracy afterwards.
 
-**Limitations to state openly:** Elliptic is 2019, Bitcoin only and only 23% labelled; upload and live heuristics are not validated on labelled bank data; pure Python is slow on very large files; scores are for human review, not proof.
+**Limitations to state openly:** Elliptic is 2019, Bitcoin only and only 23% labelled (Real-CATS is newer but address-level); upload and live heuristics are not validated on labelled bank data; pure Python is slow on very large files; scores are for human review, not proof.
 
 # 8. Viva and demo notes
 

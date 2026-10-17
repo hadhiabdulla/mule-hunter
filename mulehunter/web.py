@@ -4,7 +4,7 @@ import os
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import accounts, live, upload
+from . import accounts, live, upload, watchlists
 from .export import RESULTS
 
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -24,6 +24,13 @@ def summarise(res, extra=None):
         "network": accounts.network(res), **(extra or {})}
 
 
+def check_lists(res):
+    try:
+        return watchlists.apply(res)
+    except Exception as e:      # lists are a bonus, never break the analysis
+        return {"errors": [str(e)], "ofac_hits": 0, "scam_hits": 0, "ofac_loaded": 0, "scam_loaded": 0}
+
+
 class H(BaseHTTPRequestHandler):
     def _send(self, code, body, ctype="application/json"):
         b = body if isinstance(body, bytes) else json.dumps(body).encode()
@@ -37,6 +44,12 @@ class H(BaseHTTPRequestHandler):
         if self.path in ("/", "/index.html"):
             with open(os.path.join(STATIC, "index.html"), "rb") as f:
                 return self._send(200, f.read(), "text/html; charset=utf-8")
+        if self.path == "/api/realcats":
+            p = os.path.join(RESULTS, "realcats.json")
+            if not os.path.exists(p):
+                return self._send(404, {"error": "No Real-CATS results yet. Run: python3 run.py --realcats"})
+            with open(p, "rb") as f:
+                return self._send(200, f.read())
         if self.path == "/api/elliptic":
             p = os.path.join(RESULTS, "elliptic.json")
             if not os.path.exists(p):
@@ -59,13 +72,13 @@ class H(BaseHTTPRequestHandler):
             if self.path == "/api/upload/analyse":
                 tx, rep = upload.parse(body["csv"], body.get("mapping"))
                 res = accounts.analyse(tx, reporting_limit=float(body.get("limit") or 10000))
-                return self._send(200, summarise(res, {"report": rep}))
+                return self._send(200, summarise(res, {"report": rep, "watch": check_lists(res)}))
             if self.path == "/api/live":
                 nb = max(1, min(int(body.get("blocks", 6)), 10))
                 pb = max(25, min(int(body.get("per_block", 100)), 300))
                 edges, info = live.fetch(nb, pb, log=lambda *a: None)
                 res = accounts.analyse(edges, relay_window_h=6)
-                return self._send(200, summarise(res, {"live": info}))
+                return self._send(200, summarise(res, {"live": info, "watch": check_lists(res)}))
             self._send(404, {"error": "not found"})
         except (ValueError, KeyError) as e:
             self._send(400, {"error": str(e)})

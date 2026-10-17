@@ -2,7 +2,8 @@
 
   python run.py --download      fetch the real Elliptic dataset (about 700 MB, one time)
   python run.py --elliptic      train + evaluate on Elliptic, write results/
-  python run.py --serve         open the web app (Elliptic results, CSV upload, live mode)
+  python run.py --realcats      download and evaluate Real-CATS (real addresses, data to 2024)
+  python run.py --serve         open the web app (Elliptic, Real-CATS, CSV upload, live mode)
   python run.py --csv my.csv    score your own transactions file from the terminal
 """
 import argparse
@@ -13,12 +14,13 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--download", action="store_true")
     ap.add_argument("--elliptic", action="store_true")
+    ap.add_argument("--realcats", action="store_true", help="download and evaluate Real-CATS (2024 addresses)")
     ap.add_argument("--serve", action="store_true")
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--csv")
     ap.add_argument("--live", action="store_true", help="score recent real Bitcoin transactions")
     a = ap.parse_args()
-    if not any([a.download, a.elliptic, a.serve, a.csv, a.live]):
+    if not any([a.download, a.elliptic, a.realcats, a.serve, a.csv, a.live]):
         ap.print_help()
         return
     if a.download:
@@ -32,6 +34,10 @@ def main():
         export.export(res, label, step)
         print(open(export.RESULTS + "/metrics.md").read())
         print("Written to results/. Open the web app with: python run.py --serve")
+    if a.realcats:
+        from mulehunter import realcats
+        realcats.run_all()
+        print(open("results/realcats_metrics.md").read())
     if a.csv:
         from mulehunter import upload, accounts
         tx, rep = upload.parse(open(a.csv, newline="", encoding="utf-8-sig").read())

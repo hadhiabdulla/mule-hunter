@@ -31,9 +31,10 @@ canvas{width:100%;height:520px;background:#0a0f20;border:1px solid var(--line);b
 code{background:var(--panel2);padding:1px 6px;border-radius:5px}.spin{color:var(--acc)}
 </style></head><body>
 <header><h1>Mule <span>Hunter</span></h1><p>Graph-based money-laundering and mule-account detection</p></header>
-<nav id="nav"><button class="on" data-t="ell">Real data: Elliptic</button><button data-t="up">Upload your CSV</button><button data-t="live">Live Bitcoin</button><button data-t="about">How it works</button></nav>
+<nav id="nav"><button class="on" data-t="ell">Real data: Elliptic</button><button data-t="rc">Real data: 2024 addresses</button><button data-t="up">Upload your CSV</button><button data-t="live">Live Bitcoin</button><button data-t="about">How it works</button></nav>
 <main>
 <section id="ell"></section>
+<section id="rc" hidden></section>
 <section id="up" hidden>
  <div class="box"><h2>Upload your own transactions</h2>
  <p class="note">CSV with sender, receiver, amount, timestamp and optionally a label (1 = known fraud). Your file stays on this computer; nothing is uploaded anywhere.</p>
@@ -53,7 +54,7 @@ const $=s=>document.querySelector(s),E=(t,h)=>{const e=document.createElement(t)
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pill=r=>`<span class="pill ${r>=60?'hi':r>=40?'md':'lo'}">${Number(r).toFixed(0)}</span>`;
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
- ['ell','up','live','about'].forEach(t=>$('#'+t).hidden=t!==b.dataset.t)});
+ ['ell','rc','up','live','about'].forEach(t=>$('#'+t).hidden=t!==b.dataset.t)});
 const color=r=>r>=60?'#ff5d73':r>=40?'#ffb703':'#3ddc97';
 
 function network(host,data,opts={}){
@@ -84,6 +85,7 @@ function network(host,data,opts={}){
 function results(host,d){
  const s=d.summary;let h=`<div class="cards"><div class="card"><b>${s.accounts}</b><span>accounts</span></div><div class="card"><b>${s.transactions}</b><span>transactions</span></div><div class="card"><b style="color:var(--red)">${s.high_risk}</b><span>high risk (60+)</span></div><div class="card"><b style="color:var(--amb)">${s.medium_risk}</b><span>medium risk (40-59)</span></div><div class="card"><b>${s.round_trips}</b><span>round-trip loops</span></div></div>`;
  if(d.report){const r=d.report;h+=`<p class="note">Used ${r.rows_ok} rows, skipped ${r.rows_skipped}. Columns: ${Object.entries(r.mapping).map(([k,v])=>k+' = '+esc(v)).join(', ')}.${r.has_labels?' Labels were used.':''}</p>`+(r.problems.length?`<div class="warn">${r.problems.map(esc).join('<br>')}</div>`:'')}
+ if(d.watch){const w=d.watch;h+=`<p class="note">Checked against public lists: ${w.ofac_loaded} sanctioned addresses (US OFAC) and ${w.scam_loaded} reported scam addresses (ScamSniffer). Hits: ${w.ofac_hits} sanctioned, ${w.scam_hits} scam.${w.errors&&w.errors.length?' (List problem: '+w.errors.map(esc).join('; ')+')':''}</p>`}
  if(d.live)h+=`<p class="note">Real Bitcoin blocks ${d.live.blocks.join(', ')} (newest block time ${d.live.newest_block_time_utc} UTC), ${d.live.txs} transactions.</p>`;
  h+=`<div class="box"><h2>Network of suspicious accounts</h2><div id="nv"></div></div><div class="box"><h2>Ranked accounts</h2><table><tr><th>Account</th><th>Risk</th><th>Why</th><th>In / out</th></tr>`+
  d.top.map(r=>`<tr><td style="word-break:break-all">${esc(r.account)}</td><td>${pill(r.risk)}</td><td>${r.reasons.map(x=>esc(x.text)).join('<br>')||'<span class="note">-</span>'}</td><td>${r.tx_in} / ${r.tx_out}</td></tr>`).join('')+'</table></div>';
@@ -113,6 +115,12 @@ fetch('/api/elliptic').then(r=>r.json().then(j=>({ok:r.ok,j}))).then(({ok,j})=>{
  <div class="box"><h2>Network of the highest-risk clusters</h2><div id="en"></div></div>
  <div class="box"><h2>Top new leads (unlabelled transactions the model rates highest)</h2><table><tr><th>Transaction</th><th>Risk</th><th>Step</th><th>Why</th></tr>`+j.leads.slice(0,25).map(r=>`<tr><td>${r.id}</td><td>${pill(r.risk)}</td><td>${r.step}</td><td>${r.reasons.map(esc).join('<br>')}</td></tr>`).join('')+'</table></div>';
  host.innerHTML=h;network($('#en'),j.network,{labels:true})});
+
+fetch('/api/realcats').then(r=>r.json().then(j=>({ok:r.ok,j}))).then(({ok,j})=>{const host=$('#rc');if(!ok){host.innerHTML=`<div class="box"><h2>Real-CATS results not built yet</h2><p>${esc(j.error)}</p></div>`;return}
+ let h='<div class="warn"><b>What this data is:</b> Real-CATS (2025), real criminal cryptocurrency addresses from real-world reports and benign exchange-customer addresses, data up to 2024. Address-level behaviour features, not a transaction graph. Models are trained on addresses first seen earlier and tested on addresses first seen later. Licence of the repository: MIT.</div>';
+ for(const c of Object.keys(j)){const r=j[c];h+=`<div class="box"><h2>${c}: train to ${r.train_until}, test on ${r.test.toLocaleString()} newer addresses (${r.test_criminal.toLocaleString()} criminal)</h2><table><tr><th>Method</th><th>ROC-AUC</th><th>PR-AUC</th><th>Precision</th><th>Recall</th><th>F1</th></tr>`+Object.entries(r.methods).map(([k,v])=>`<tr><td>${k}</td>${['roc_auc','pr_auc','precision','recall','f1'].map(x=>`<td>${v[x].toFixed(3)}</td>`).join('')}</tr>`).join('')+`</table>
+ <div class="grid2"><div><h3>Recall by crime type (random forest)</h3><table><tr><th>Type</th><th>Addresses</th><th>Caught</th><th>Recall</th></tr>`+r.by_type.map(t=>`<tr><td>${esc(t.type)}</td><td>${t.count}</td><td>${t.caught}</td><td>${(t.recall*100).toFixed(0)}%</td></tr>`).join('')+`</table></div><div><h3>Strongest features</h3>`+r.importance.map(([n,v])=>`<div style="margin:5px 0"><span class="note">${esc(n)}</span><div class="bar" style="width:${v/r.importance[0][1]*100}%"></div></div>`).join('')+`</div></div><p class="note">${r.false_alarms} of ${r.benign_test.toLocaleString()} benign test addresses were flagged at this threshold.</p></div>`}
+ host.innerHTML=h});
 $('#about').innerHTML=`<div class="box"><h2>How Mule Hunter works</h2><p>Real mule operations move stolen money through chains of accounts that pass it on quickly and in similar amounts. The tool looks at the money-flow graph and combines several independent signals.</p>
 <h3>On the Elliptic data</h3><ul><li><b>Graph features:</b> in/out degree, 2-hop fan-in/fan-out hubs, one-in-one-out relay chains, forward and reverse PageRank.</li><li><b>Random forest and logistic regression</b> written from scratch, trained on the past time steps and tested on later ones.</li><li><b>Seeded taint propagation:</b> confirmed illicit transactions spread suspicion along the flow, in both directions.</li><li><b>Case files</b> for each connected high-risk cluster.</li></ul>
 <h3>On your CSV and live data (no labels needed)</h3><ul><li><b>Relay detection</b> (money in, nearly the same money out within hours), <b>round-trip loops</b>, <b>hub behaviour</b>, <b>structuring</b> below a reporting limit, <b>Isolation Forest</b> anomaly score, and <b>taint</b> from any labels you supply.</li><li>Signals combine with a noisy-OR, so every score comes with plain-language reasons.</li></ul>
