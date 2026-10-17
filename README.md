@@ -116,7 +116,7 @@ Uploaded and live results are also checked against two public lists, downloaded 
 | Upload | `mulehunter/upload.py` | Column detection, validation |
 | Web app | `mulehunter/web.py`, `static/index.html` | Local server and interactive network viewer |
 
-The full guide (architecture, every method explained, using each mode, evaluation, and viva notes) is in [`docs/GUIDE.md`](docs/GUIDE.md) and [`docs/Mule_Hunter_Guide.pdf`](docs/Mule_Hunter_Guide.pdf).
+The full guide (architecture, every method explained, using each mode, and evaluation) is in [`docs/GUIDE.md`](docs/GUIDE.md) and [`docs/Mule_Hunter_Guide.pdf`](docs/Mule_Hunter_Guide.pdf).
 
 ## Limits
 

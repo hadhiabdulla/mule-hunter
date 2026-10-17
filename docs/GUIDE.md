@@ -14,7 +14,7 @@ A **money mule** is a person or account used to move money that came from crime.
 2. **Upload your CSV.** Any transaction file with sender, receiver, amount, timestamp and an optional label.
 3. **Live Bitcoin.** Recent confirmed transactions from the free public mempool.space API, scored with no keys.
 
-**Honest framing (say this first in a viva):** the built-in data is real labelled *crypto* transactions, not bank accounts. No open dataset of real bank mule accounts exists. The behaviour that makes a mule (relaying money quickly, fan-in, fan-out, layering) appears in crypto laundering in the same way, so the methods transfer.
+**Honest framing:** the built-in data is real labelled *crypto* transactions, not bank accounts. No open dataset of real bank mule accounts exists. The behaviour that makes a mule (relaying money quickly, fan-in, fan-out, layering) appears in crypto laundering in the same way, so the methods transfer.
 
 ![The Elliptic results page](img/elliptic.png){width=88%}
 
@@ -219,44 +219,7 @@ Choose the number of recent blocks and transactions per block and press **Fetch 
 
 **Limitations to state openly:** Elliptic is 2019, Bitcoin only and only 23% labelled (Real-CATS is newer but address-level); upload and live heuristics are not validated on labelled bank data; pure Python is slow on very large files; scores are for human review, not proof.
 
-# 8. Viva and demo notes
-
-## 30-second pitch
-
-"Mule accounts hide stolen money by passing it along quickly through chains of accounts. I built a tool that reads transaction graphs and scores each account by the shape of its money flow: relays, hubs, loops, and closeness to known-bad accounts. I trained and tested it on a real labelled Bitcoin dataset, 203,000 transactions, using the past to predict the future, and got 0.93 ROC-AUC and 0.78 F1. It also scores your own CSV files and live Bitcoin."
-
-## Demo script (5 minutes)
-
-1. Open the Elliptic tab. Point out the yellow data note, the evaluation table, and the network of clusters. Click a node and read the reasons.
-2. Open the Upload tab, drop `sample_transactions.csv`. Show the column mapping, press Analyse, and show how the chain MULE1, MULE2 and BOSS lights up while victims stay low.
-3. Open Live Bitcoin, fetch 6 blocks, show the ranked leads and say they are leads, not accusations.
-4. Open `results/cases/case_N1.md` as an investigator's handoff.
-
-## Likely questions and answers
-
-**Why Bitcoin and not bank data?** No open real bank mule dataset exists with a usable licence. The pattern that defines a mule, quick relay through a chain of accounts, is the same in crypto laundering, so the methods carry over. I say clearly that this is crypto.
-
-**Where does the data come from?** Elliptic is Bitcoin transactions labelled by a blockchain analytics company. The sample CSV and unit tests use tiny hand-made examples for format and code checking only.
-
-**Why a time split?** Random splits leak information between neighbouring transactions. Training on the past and testing on the future is how it would be used.
-
-**Why did you write the models from scratch?** To make every step explainable and to keep the project dependency-free. The Random Forest and Isolation Forest follow the published algorithms.
-
-**Why does Isolation Forest fail on Elliptic?** Anomaly detection assumes bad things look different. Elliptic's illicit transactions look structurally normal, so unsupervised scoring ranks them as ordinary. I report it instead of hiding it.
-
-**What is taint propagation?** Suspicion flows along money flow from confirmed illicit transactions, shrinking at each hop. It finds transactions linked to known bad ones.
-
-**What is the noisy-OR?** A way to combine independent signals: the account is clean only if every signal fails. One strong signal can raise the score; weak signals cannot reach high risk alone.
-
-**How do you avoid flagging victims?** Taint only flows forward from a bad receiver. Relay and chain signals look at accounts that forward money, not accounts that send it.
-
-**False positives?** Shops, payroll, exchanges and crowdfunding are hubs. Hub signals count only together with pass-through, and every score shows its reasons so an analyst can dismiss it.
-
-**What would you do next?** Graph neural networks on the Elliptic graph, the larger Elliptic++ wallet-level data, calibrating the upload heuristics on labelled bank data, and an analyst feedback loop.
-
-**Is this legal and ethical?** It is defensive: it detects and explains laundering. It uses public data under its licence (non-commercial research), keeps uploads on the local machine, and states that scores are leads, not proof.
-
-# 9. References
+# 8. References
 
 * Weber et al., "Anti-Money Laundering in Bitcoin: Experimenting with Graph Convolutional Networks for Financial Forensics", KDD Workshop 2019 (Elliptic Data Set).
 * Liu, Ting, Zhou, "Isolation Forest", ICDM 2008.
