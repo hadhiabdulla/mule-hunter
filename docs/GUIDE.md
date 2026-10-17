@@ -33,7 +33,7 @@ Datasets considered and why they were not the main choice: Elliptic++ (real wall
 
 ## 2.1 Second dataset: Real-CATS (2025, data to 2024)
 
-Real criminal addresses from public reports plus benign exchange-customer addresses, Bitcoin (40,032 criminal, 86,583 benign) and Ethereum (12,561 criminal, 15,595 benign), 32 or 52 behaviour features each, MIT licence on the authors' repository (github.com/sjdseu/Real-CATS, arXiv 2501.15553). Downloaded at run time with `--realcats`. Address-level only (no transaction graph). Time split: train on addresses first seen earlier, test on later ones.
+Real criminal addresses from public reports plus benign exchange-customer addresses, Bitcoin (about 90,600 criminal and 90,200 benign rows) and Ethereum (about 12,600 criminal and 16,000 benign rows), with behaviour features per address, MIT licence on the authors' repository (github.com/sjdseu/Real-CATS, arXiv 2501.15553). Downloaded at run time with `--realcats`. Address-level only (no transaction graph). Time split: train on addresses first seen earlier, test on later ones.
 
 | Data and method | ROC-AUC | PR-AUC | Precision | Recall | F1 |
 |---|---|---|---|---|---|
